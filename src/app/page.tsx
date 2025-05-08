@@ -1,13 +1,27 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { CircleX, Clock, Timer } from "lucide-react"
+import { Clock, Link, Timer, TimerIcon } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
+// Define the form schema with Zod
+const formSchema = z.object({
+  title: z.string().optional(),
+  dateTime: z.string().refine((date) => {
+    // Ensure the date is in the future
+    const selectedDate = new Date(date).getTime()
+    const currentDate = new Date().getTime()
+    return selectedDate > currentDate
+  }, { message: "Date/time must be in the future" })
+})
+
+// Define TypeScript type based on the schema
+type FormValues = z.infer<typeof formSchema>
 
 export default function Home() {
-  const [title, setTitle] = useState("")
-  const [dateTime, setDateTime] = useState("")
   const router = useRouter()
 
   // Get current date and time formatted for min attribute
@@ -22,111 +36,76 @@ export default function Home() {
     return `${year}-${month}-${day}T${hours}:${minutes}`
   }
 
-  // Helper function to check if date is in the future
-  const isDateInFuture = (date: string): boolean => {
-    const selectedDate = new Date(date).getTime()
-    const currentDate = new Date().getTime()
-    return selectedDate > currentDate
-  }
-
-  // Handle datetime input change with validation
-  const handleDateTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedDateTime = e.target.value
-    setDateTime(selectedDateTime)
-
-    // If the date is in the past, show a warning toast
-    if (selectedDateTime && !isDateInFuture(selectedDateTime)) {
-      toast.custom((t) => (
-        <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
-          <div role="alert" className="alert alert-warning">
-            <CircleX className="w-6 h-6" />
-            <span>Selected time is in the past. Please choose a future date/time.</span>
-          </div>
-        </div>
-      ))
+  // Set up React Hook Form with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      dateTime: ""
     }
-  }
+  })
+
+  // Watch the dateTime value for real-time access
+  const watchedDateTime = watch("dateTime")
 
   const handleCopyLink = () => {
-    if (!dateTime) {
-      toast.custom((t) => (
-        <div
-          className={t.visible ? 'animate-enter' : 'animate-leave'}
-        >
-          <div role="alert" className="alert alert-error">
-            <CircleX className="w-6 h-6" />
-            <span>Select a date/time</span>
+    // Use handleSubmit from react-hook-form to validate before processing
+    handleSubmit(
+      (data) => {
+        // Make title parameter optional by only including it if it exists
+        const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
+        const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(data.dateTime)}${titleParam}`
+        navigator.clipboard.writeText(url)
+
+        toast.custom((t) => (
+          <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
+            <div role="alert" className="alert alert-success">
+              <Timer className="w-6 h-6" />
+              <span>Your timer has been started!</span>
+            </div>
           </div>
-        </div>
-      ))
-      return;
-    }
-
-    // Check if the date is in the future
-    if (!isDateInFuture(dateTime)) {
-      toast.custom((t) => (
-        <div
-          className={t.visible ? 'animate-enter' : 'animate-leave'}
-        >
-          <div role="alert" className="alert alert-error">
-            <CircleX className="w-6 h-6" />
-            <span>Date/time must be in the future</span>
-          </div>
-        </div>
-      ))
-      return;
-    }
-
-    // Make title parameter optional by only including it if it exists
-    const titleParam = title ? `&title=${encodeURIComponent(title)}` : ""
-    const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(dateTime)}${titleParam}`
-    navigator.clipboard.writeText(url)
-
-    toast.custom((t) => (
-      <div
-        className={t.visible ? 'animate-enter' : 'animate-leave'}
-      >
-        <div role="alert" className="alert alert-success">
-          <Timer className="w-6 h-6" />
-          <span>Your timer has been started!</span>
-        </div>
-      </div>
-    ))
-
+        ))
+      },
+      (formErrors) => {
+        if (formErrors.dateTime) {
+          toast.custom((t) => (
+            <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
+              <div role="alert" className="alert alert-error">
+                <Timer className="w-6 h-6" />
+                <span>{formErrors.dateTime?.message || "Invalid date"}</span>
+              </div>
+            </div>
+          ))
+        }
+      }
+    )()
   }
 
   const handleGoToTimer = () => {
-    if (!dateTime) {
-      toast.custom((t) => (
-        <div
-          className={t.visible ? 'animate-enter' : 'animate-leave'}
-        >
-          <div role="alert" className="alert alert-error">
-            <CircleX className="w-6 h-6" />
-            <span>Select a date/time</span>
-          </div>
-        </div>
-      ))
-      return
-    }
-
-    // Check if the date is in the future
-    if (!isDateInFuture(dateTime)) {
-      toast.custom((t) => (
-        <div
-          className={t.visible ? 'animate-enter' : 'animate-leave'}
-        >
-          <div role="alert" className="alert alert-error">
-            <CircleX className="w-6 h-6" />
-            <span>Date/time must be in the future</span>
-          </div>
-        </div>
-      ))
-      return;
-    }
-
-    const titleParam = title ? `&title=${encodeURIComponent(title)}` : ""
-    router.push(`/timer?dateTime=${encodeURIComponent(dateTime)}${titleParam}`)
+    // Use handleSubmit from react-hook-form to validate before processing
+    handleSubmit(
+      (data) => {
+        const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
+        router.push(`/timer?dateTime=${encodeURIComponent(data.dateTime)}${titleParam}`)
+      },
+      (formErrors) => {
+        if (formErrors.dateTime) {
+          toast.custom((t) => (
+            <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
+              <div role="alert" className="alert alert-error">
+                <Timer className="w-6 h-6" />
+                <span>{formErrors.dateTime?.message || "Invalid date"}</span>
+              </div>
+            </div>
+          ))
+        }
+      }
+    )()
   }
 
   return (
@@ -138,45 +117,57 @@ export default function Home() {
             Countdown Timer
           </h1>
 
-          <div className="form-control w-full">
-            <label className="label">
-              <span className="label-text">Event Title</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Enter event title"
-              className="input input-bordered w-full"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="form-control w-full mt-4">
-            <label className="label">
-              <span className="label-text">Target Date & Time</span>
-            </label>
-            <input
-              type="datetime-local"
-              className="input input-bordered w-full"
-              value={dateTime}
-              onChange={handleDateTimeChange}
-              min={getCurrentDateTime()} // Set the min attribute to current date/time
-            />
-            {dateTime && !isDateInFuture(dateTime) && (
+          <form>
+            <div className="form-control w-full">
               <label className="label">
-                <span className="label-text-alt text-error">Please select a future date and time</span>
+                <span className="label-text">Event Title</span>
               </label>
-            )}
-          </div>
+              <input
+                type="text"
+                placeholder="Enter event title"
+                className="input input-bordered w-full"
+                {...register("title")}
+              />
+            </div>
 
-          <div className="card-actions justify-between mt-6">
-            <button className="btn btn-outline btn-primary" onClick={handleCopyLink}>
-              Copy Link
-            </button>
-            <button className="btn btn-primary" onClick={handleGoToTimer}>
-              Go to Timer Page
-            </button>
-          </div>
+            <div className="form-control w-full mt-4">
+              <label className="label">
+                <span className="label-text">Target Date & Time</span>
+              </label>
+              <input
+                type="datetime-local"
+                className={`input input-bordered w-full ${errors.dateTime ? 'input-error' : ''}`}
+                min={getCurrentDateTime()}
+                {...register("dateTime")}
+              />
+              {errors.dateTime && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.dateTime.message}</span>
+                </label>
+              )}
+            </div>
+
+            <div className="card-actions justify-between mt-6">
+              <button
+                type="button"
+                className="btn btn-outline btn-primary"
+                onClick={handleCopyLink}
+                disabled={!watchedDateTime}
+              >
+                <Link className="w-4 h-4" />
+                Copy Link
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleGoToTimer}
+                disabled={!watchedDateTime}
+              >
+                <TimerIcon className="w-4 h-4" />
+                Go to Timer Page
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
