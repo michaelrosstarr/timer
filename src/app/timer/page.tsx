@@ -14,52 +14,52 @@ function TimerContent() {
 
     const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 })
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null)
+    const [isUIVisible, setIsUIVisible] = useState(true)
 
     // Handle wakeLock to keep screen on
     useEffect(() => {
         // Check if the Wake Lock API is supported
         if ('wakeLock' in navigator) {
+            let wakeLockRef: WakeLockSentinel | null = null;
+
             const requestWakeLock = async () => {
+                if (wakeLockRef) return; // Avoid requesting if we already have a lock
+
                 try {
-                    const lock = await navigator.wakeLock.request('screen');
-                    setWakeLock(lock);
-                    console.log('Wake Lock is active');
+                    wakeLockRef = await navigator.wakeLock.request('screen');
 
-                    // Release wake lock if page loses visibility
-                    const handleVisibilityChange = () => {
-                        if (document.visibilityState === 'visible' && !wakeLock) {
-                            requestWakeLock();
-                        }
-                    };
-
-                    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-                    return () => {
-                        document.removeEventListener('visibilitychange', handleVisibilityChange);
-                    };
+                    // Add a release handler
+                    wakeLockRef.addEventListener('release', () => {
+                        wakeLockRef = null;
+                    });
                 } catch (err) {
                     console.error(`Failed to get wake lock: ${err}`);
                 }
             };
 
+            // Handle visibility changes
+            const handleVisibilityChange = () => {
+                if (document.visibilityState === 'visible' && !wakeLockRef) {
+                    requestWakeLock();
+                }
+            };
+
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+
+            // Initial request
             requestWakeLock();
 
-            // Release the wake lock when component unmounts
+            // Cleanup on unmount
             return () => {
-                if (wakeLock) {
-                    wakeLock.release()
-                        .then(() => {
-                            console.log('Wake Lock released');
-                            setWakeLock(null);
-                        })
-                        .catch((err: Error) => console.error(`Failed to release wake lock: ${err}`));
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+                if (wakeLockRef) {
+                    wakeLockRef.release().catch(err => console.error(`Failed to release wake lock: ${err}`));
                 }
             };
         } else {
-            console.log('Wake Lock API not supported in this browser');
+            // Wake Lock API not supported
         }
-    }, [wakeLock]);
+    }, []); // Empty dependency array - only run on mount/unmount
 
     // Handle fullscreen change events
     useEffect(() => {
@@ -73,6 +73,48 @@ function TimerContent() {
             document.removeEventListener('fullscreenchange', handleFullscreenChange)
         }
     }, [])  // This effect only needs to run once on mount
+
+    // Handle UI visibility based on mouse inactivity
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout | null = null;
+
+        // Show UI on any mouse movement or touch
+        const handleActivity = () => {
+            setIsUIVisible(true);
+
+            // Clear any existing timer
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+
+            // Set a new timer to hide UI after 5 seconds of inactivity
+            timeoutId = setTimeout(() => {
+                setIsUIVisible(false);
+            }, 5000);
+        };
+
+        // Initialize - show UI and set timer
+        handleActivity();
+
+        // Add event listeners for both mouse and touch events
+        document.addEventListener('mousemove', handleActivity);
+        document.addEventListener('touchstart', handleActivity);
+        document.addEventListener('touchmove', handleActivity);
+        document.addEventListener('click', handleActivity);
+        document.addEventListener('keydown', handleActivity);
+
+        // Clean up
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            document.removeEventListener('mousemove', handleActivity);
+            document.removeEventListener('touchstart', handleActivity);
+            document.removeEventListener('touchmove', handleActivity);
+            document.removeEventListener('click', handleActivity);
+            document.removeEventListener('keydown', handleActivity);
+        };
+    }, []); // Remove inactivityTimer from dependency array
 
     // Handle timer logic
     useEffect(() => {
@@ -130,15 +172,17 @@ function TimerContent() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-5 relative">
+        <div className={`min-h-screen flex flex-col items-center justify-center p-5 relative ${!isUIVisible ? 'cursor-none' : ''}`}>
             {/* Fullscreen button in top right corner */}
             <button
                 type="button"
                 onClick={toggleFullscreen}
-                className="absolute top-5 right-5 p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors hover:cursor-pointer"
+                className={`absolute top-5 right-5 p-3 md:p-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors touch-manipulation ${isUIVisible ? 'opacity-100' : 'opacity-0'
+                    } transition-opacity duration-300`}
                 aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                style={{ touchAction: 'manipulation' }}
             >
-                {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                {isFullscreen ? <Minimize2 size={28} /> : <Maximize2 size={28} />}
             </button>
 
             {title && <h1 className="text-4xl md:text-6xl font-bold text-center mb-8">{decodeURIComponent(title)}</h1>}

@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* Custom class for hiding cursor */
+.cursor-none {
+  cursor: none !important;
+}
+
 @theme {
   --text-timer: 10rem;
 
