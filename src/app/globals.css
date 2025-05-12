@@ -7,7 +7,7 @@
 }
 
 @theme {
-  --text-timer: 10rem;
+  --text-timer: 15rem;
 
   @keyframes enter {
     0% {
