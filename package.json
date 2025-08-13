@@ -13,27 +13,28 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.0.1",
-    "@opennextjs/cloudflare": "^1.0.1",
-    "lucide-react": "^0.508.0",
-    "next": "15.3.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-hook-form": "^7.56.3",
+    "@hookform/resolvers": "^5.2.1",
+    "@opennextjs/cloudflare": "^1.6.5",
+    "lucide-react": "^0.539.0",
+    "next": "15.4.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.5.2",
-    "zod": "^3.24.4"
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "daisyui": "^5.0.35",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.2",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.14.4"
-  }
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "daisyui": "^5.0.50",
+    "eslint": "^9.33.0",
+    "eslint-config-next": "15.4.6",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.29.0"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

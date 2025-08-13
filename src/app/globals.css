@@ -1,13 +1,38 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* CSS Variables for consistent theming */
+:root {
+  --bg-light: #ffffff;
+  --bg-light-secondary: #f8fafc;
+  --text-light: #1e293b;
+  --text-light-secondary: #64748b;
+  --border-light: #e2e8f0;
+  
+  --bg-dark: #0f172a;
+  --bg-dark-secondary: #1e293b;
+  --text-dark: #f1f5f9;
+  --text-dark-secondary: #94a3b8;
+  --border-dark: #334155;
+  
+  --accent-color: #3b82f6;
+  --danger-color: #ef4444;
+}
+
 /* Custom class for hiding cursor */
 .cursor-none {
   cursor: none !important;
 }
 
+/* Smooth transitions for all elements */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
 @theme {
   --text-timer: 15rem;
+  --text-timer-sm: 8rem;
+  --text-timer-md: 12rem;
 
   @keyframes enter {
     0% {
@@ -31,7 +56,96 @@
     }
   }
 
-  --animate-enter: enter 0.35s ease-out forwards;
-  --animate-leave: leave 0.35s ease-in forwards;
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
+  @keyframes scaleIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse-timer {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes countdown-urgent {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+  }
+
+  --animate-enter: enter 0.25s ease-out forwards;
+  --animate-leave: leave 0.25s ease-in forwards;
+  --animate-fade-in: fadeIn 0.4s ease-out;
+  --animate-scale-in: scaleIn 0.3s ease-out;
+  --animate-pulse-timer: pulse-timer 1s ease-in-out infinite;
+  --animate-countdown-urgent: countdown-urgent 1s ease-in-out infinite;
+}
+
+/* Timer specific styles */
+
+/* Individual number containers for consistent width */
+.timer-number {
+  display: inline-block;
+  min-width: 0.6em;
+  text-align: center;
+}
+
+.timer-separator {
+  display: inline-block;
+  min-width: 0.3em;
+  text-align: center;
+}
+
+.glass-effect {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

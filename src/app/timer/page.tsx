@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Maximize2, Minimize2 } from "lucide-react"
+import { Maximize2, Minimize2, ArrowLeft, Calendar, Moon, Sun } from "lucide-react"
 
 // Create a client component that uses useSearchParams
 function TimerContent() {
@@ -15,6 +15,13 @@ function TimerContent() {
     const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 })
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [isUIVisible, setIsUIVisible] = useState(true)
+    const [isDarkMode, setIsDarkMode] = useState(false)
+    const [isMounted, setIsMounted] = useState(false)
+
+    // Set mounted state after hydration
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
 
     // Handle wakeLock to keep screen on
     useEffect(() => {
@@ -56,8 +63,6 @@ function TimerContent() {
                     wakeLockRef.release().catch(err => console.error(`Failed to release wake lock: ${err}`));
                 }
             };
-        } else {
-            // Wake Lock API not supported
         }
     }, []); // Empty dependency array - only run on mount/unmount
 
@@ -89,7 +94,9 @@ function TimerContent() {
 
             // Set a new timer to hide UI after 5 seconds of inactivity
             timeoutId = setTimeout(() => {
-                setIsUIVisible(false);
+                if (isFullscreen) {
+                    setIsUIVisible(false);
+                }
             }, 5000);
         };
 
@@ -114,7 +121,7 @@ function TimerContent() {
             document.removeEventListener('click', handleActivity);
             document.removeEventListener('keydown', handleActivity);
         };
-    }, []); // Remove inactivityTimer from dependency array
+    }, [isFullscreen]); // Add isFullscreen to dependency array
 
     // Handle timer logic
     useEffect(() => {
@@ -153,6 +160,21 @@ function TimerContent() {
         return () => clearInterval(timer)
     }, [dateTime, router])
 
+    // Theme detection and handling
+    useEffect(() => {
+        if (!isMounted) return
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        setIsDarkMode(mediaQuery.matches)
+
+        const handleChange = (e: MediaQueryListEvent) => {
+            setIsDarkMode(e.matches)
+        }
+
+        mediaQuery.addEventListener('change', handleChange)
+        return () => mediaQuery.removeEventListener('change', handleChange)
+    }, [isMounted])
+
     const formatTime = (value: number) => {
         return value.toString().padStart(2, "0")
     }
@@ -171,28 +193,155 @@ function TimerContent() {
         }
     }
 
+    const toggleTheme = () => {
+        setIsDarkMode(!isDarkMode)
+    }
+
+    const getTimeLeftFormatted = () => {
+        // Helper to render each digit in a fixed-width span
+        const renderDigits = (str: string, extraClass = "") => (
+            <>
+                {str.split("").map((char, idx) => (
+                    <span
+                        key={idx}
+                        className={`inline-block w-[1ch] text-center ${extraClass}`}
+                        style={{ fontVariantNumeric: "tabular-nums" }}
+                    >
+                        {char}
+                    </span>
+                ))}
+            </>
+        );
+
+        // Always show hours:minutes:seconds format
+        return (
+            <span className="inline-flex gap-1 font-mono text-9xl">
+                {renderDigits(formatTime(timeLeft.hours))}
+                <span className="inline-block w-[1ch] text-center">:</span>
+                {renderDigits(formatTime(timeLeft.minutes))}
+                <span className="inline-block w-[1ch] text-center">:</span>
+                {renderDigits(formatTime(timeLeft.seconds), "text-red-500")}
+            </span>
+        );
+    }
+
+    const getTargetTimeFormatted = () => {
+        if (!dateTime) return ""
+        const target = new Date(dateTime)
+        return target.toLocaleString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        })
+    }
+
     return (
-        <div className={`min-h-screen flex flex-col items-center justify-center p-5 relative ${!isUIVisible ? 'cursor-none' : ''}`}>
-            {/* Fullscreen button in top right corner */}
-            <button
-                type="button"
-                onClick={toggleFullscreen}
-                className={`absolute top-5 right-5 p-3 md:p-4 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors touch-manipulation ${isUIVisible ? 'opacity-100' : 'opacity-0'
-                    } transition-opacity duration-300`}
-                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                style={{ touchAction: 'manipulation' }}
-            >
-                {isFullscreen ? <Minimize2 size={28} /> : <Maximize2 size={28} />}
-            </button>
+        <div
+            className={`min-h-screen transition-all duration-300 ${!isMounted
+                ? 'bg-white' // Default to light mode during SSR
+                : isDarkMode
+                    ? 'bg-slate-900'
+                    : 'bg-white'
+                } flex flex-col items-center justify-center p-4 md:p-8 relative ${!isUIVisible ? 'cursor-none' : ''
+                }`}
+        >
+            {/* Header Controls */}
+            <div className={`absolute top-4 left-4 right-4 flex justify-between items-center z-10 ${isUIVisible ? 'opacity-100' : 'opacity-0'
+                } transition-opacity duration-300`}>
+                <button
+                    type="button"
+                    onClick={() => router.push('/')}
+                    className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+                        ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
+                        : isDarkMode
+                            ? 'text-white bg-white/5 border border-white/10'
+                            : 'text-slate-700 bg-black/5 border border-black/10'
+                        }`}
+                    aria-label="Go back to home"
+                >
+                    <ArrowLeft size={24} />
+                </button>
 
-            {title && <h1 className="text-4xl md:text-6xl font-bold text-center mb-8">{decodeURIComponent(title)}</h1>}
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={toggleTheme}
+                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+                            ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
+                            : isDarkMode
+                                ? 'text-white bg-white/5 border border-white/10'
+                                : 'text-slate-700 bg-black/5 border border-black/10'
+                            }`}
+                        aria-label="Toggle theme"
+                    >
+                        {!isMounted ? <Moon size={24} /> : isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+                    </button>
 
-            <div className="text-timer font-mono font-bold tracking-tight">
-                {formatTime(timeLeft.hours)}
-                <span className="mx-5">:</span>
-                {formatTime(timeLeft.minutes)}
-                <span className="mx-5">:</span>
-                <span className="text-red-500">{formatTime(timeLeft.seconds)}</span>
+                    <button
+                        type="button"
+                        onClick={toggleFullscreen}
+                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+                            ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
+                            : isDarkMode
+                                ? 'text-white bg-white/5 border border-white/10'
+                                : 'text-slate-700 bg-black/5 border border-black/10'
+                            }`}
+                        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                    </button>
+                </div>
+            </div>
+
+            {/* Main Timer Content */}
+            <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl animate-fade-in">
+                {/* Event Title */}
+                {title && (
+                    <h1 className={`text-3xl md:text-5xl lg:text-6xl font-bold text-center mb-6 animate-scale-in ${!isMounted
+                        ? 'text-slate-800' // Default to light mode
+                        : isDarkMode ? 'text-white' : 'text-slate-800'
+                        }`}>
+                        {decodeURIComponent(title)}
+                    </h1>
+                )}
+
+                {/* Target Time Display */}
+                <div className={`flex items-center gap-2 mb-4 px-4 py-2 rounded-lg glass-effect ${!isMounted
+                    ? 'text-slate-600 bg-black/5 border border-black/10' // Default to light mode
+                    : isDarkMode
+                        ? 'text-white/80 bg-white/5 border border-white/10'
+                        : 'text-slate-600 bg-black/5 border border-black/10'
+                    }`}>
+                    <Calendar size={20} />
+                    <span className="text-lg font-medium">
+                        {getTargetTimeFormatted()}
+                    </span>
+                </div>
+
+                {/* Timer Display */}
+                <div className={`text-center font-bold ${!isMounted
+                    ? 'text-slate-800' // Default to light mode
+                    : isDarkMode
+                        ? 'text-white'
+                        : 'text-slate-800'
+                    }`}>
+                    {getTimeLeftFormatted()}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Loading component with better styling
+function TimerLoading() {
+    return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-white text-lg font-medium">Loading timer...</p>
             </div>
         </div>
     )
@@ -201,7 +350,7 @@ function TimerContent() {
 // Main page component with Suspense boundary
 export default function TimerPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+        <Suspense fallback={<TimerLoading />}>
             <TimerContent />
         </Suspense>
     )

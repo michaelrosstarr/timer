@@ -1,8 +1,23 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'Countdown Timer',
-    description: 'A simple countdown timer application',
+    title: 'Live Countdown Timer - Full Screen Timer Display',
+    description: 'Beautiful fullscreen countdown timer with progress tracking, wake lock support, and responsive design.',
+    keywords: 'countdown timer, live timer, fullscreen timer, event countdown, timer display',
+    openGraph: {
+        title: 'Live Countdown Timer',
+        description: 'Beautiful fullscreen countdown timer with progress tracking and wake lock support.',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Live Countdown Timer',
+        description: 'Beautiful fullscreen countdown timer with progress tracking and wake lock support.',
+    },
+    robots: {
+        index: false, // Timer pages shouldn't be indexed as they're dynamic
+        follow: true,
+    },
 }
 
 export default function TimerLayout({
@@ -11,8 +26,8 @@ export default function TimerLayout({
     children: React.ReactNode
 }) {
     return (
-        <div className='bg-white dark:bg-base-100'>
+        <>
             {children}
-        </div>
+        </>
     )
 }

@@ -1,11 +1,12 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Clock, Link, Timer, TimerIcon } from "lucide-react"
+import { Clock, Link, Timer, Moon, Sun, Sparkles, Play } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useState, useEffect } from "react"
 
 // Define the form schema with Zod
 const formSchema = z.object({
@@ -30,6 +31,29 @@ type FormValues = z.infer<typeof formSchema>
 
 export default function Home() {
   const router = useRouter()
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Set mounted state after hydration
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Theme detection and handling
+  useEffect(() => {
+    if (!isMounted) return
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    setIsDarkMode(mediaQuery.matches)
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDarkMode(e.matches)
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [isMounted])
 
   // Helper function to convert time string to full DateTime
   const timeToDateTime = (timeStr: string): string => {
@@ -69,8 +93,38 @@ export default function Home() {
 
   // Watch the time value for real-time access
   const watchedTime = watch("time")
+  const watchedTitle = watch("title")
+
+  const getTargetTimePreview = () => {
+    if (!watchedTime) return ""
+
+    try {
+      const dateTimeStr = timeToDateTime(watchedTime)
+      const target = new Date(dateTimeStr)
+      const now = new Date()
+
+      const isToday = target.toDateString() === now.toDateString()
+      const isTomorrow = target.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString()
+
+      let dayText = ""
+      if (isToday) dayText = "Today"
+      else if (isTomorrow) dayText = "Tomorrow"
+      else dayText = target.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+
+      const timeText = target.toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+
+      return `${dayText} at ${timeText}`
+    } catch {
+      return ""
+    }
+  }
 
   const handleCopyLink = () => {
+    setIsLoading(true)
     // Use handleSubmit from react-hook-form to validate before processing
     handleSubmit(
       (data) => {
@@ -83,30 +137,50 @@ export default function Home() {
         navigator.clipboard.writeText(url)
 
         toast.custom((t) => (
-          <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
-            <div role="alert" className="alert alert-success">
-              <Timer className="w-6 h-6" />
-              <span>Your timer has been started!</span>
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} transform transition-all duration-300`}>
+            <div className={`alert shadow-lg ${!isMounted
+              ? 'bg-white text-gray-800 border-gray-200' // Default to light mode
+              : isDarkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}>
+              <div className="flex items-center">
+                <div className="p-2 rounded-full bg-green-500 text-white mr-3">
+                  <Link className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold">Link copied!</h3>
+                  <div className="text-sm opacity-80">Timer link has been copied to clipboard</div>
+                </div>
+              </div>
             </div>
           </div>
-        ))
+        ), { duration: 3000 })
+
+        setIsLoading(false)
       },
       (formErrors) => {
         if (formErrors.time) {
           toast.custom((t) => (
-            <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
-              <div role="alert" className="alert alert-error">
-                <Timer className="w-6 h-6" />
-                <span>{formErrors.time?.message || "Please select a time"}</span>
+            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} transform transition-all duration-300`}>
+              <div className={`alert alert-error shadow-lg ${isDarkMode ? 'bg-red-900 text-white border-red-800' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                <div className="flex items-center">
+                  <div className="p-2 rounded-full bg-red-500 text-white mr-3">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Invalid time</h3>
+                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please select a time"}</div>
+                  </div>
+                </div>
               </div>
             </div>
-          ))
+          ), { duration: 4000 })
         }
+        setIsLoading(false)
       }
     )()
   }
 
   const handleGoToTimer = () => {
+    setIsLoading(true)
     // Use handleSubmit from react-hook-form to validate before processing
     handleSubmit(
       (data) => {
@@ -119,82 +193,228 @@ export default function Home() {
       (formErrors) => {
         if (formErrors.time) {
           toast.custom((t) => (
-            <div className={t.visible ? 'animate-enter' : 'animate-leave'}>
-              <div role="alert" className="alert alert-error">
-                <Timer className="w-6 h-6" />
-                <span>{formErrors.time?.message || "Please select a time"}</span>
+            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} transform transition-all duration-300`}>
+              <div className={`alert alert-error shadow-lg ${isDarkMode ? 'bg-red-900 text-white border-red-800' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                <div className="flex items-center">
+                  <div className="p-2 rounded-full bg-red-500 text-white mr-3">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Invalid time</h3>
+                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please select a time"}</div>
+                  </div>
+                </div>
               </div>
             </div>
-          ))
+          ), { duration: 4000 })
         }
+        setIsLoading(false)
       }
     )()
   }
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode)
+  }
+
   return (
-    <div className="min-h-screen bg-base-200 flex flex-col items-center justify-center p-4">
-      <div className="card w-full max-w-md bg-base-100 shadow-xl">
-        <div className="card-body">
-          <h1 className="card-title text-2xl font-bold text-center mb-6 flex justify-center">
-            <Clock className="mr-2" />
-            Countdown Timer
-          </h1>
+    <div className={`min-h-screen transition-all duration-300 ${!isMounted
+      ? 'bg-white' // Default to light mode during SSR
+      : isDarkMode
+        ? 'bg-slate-900'
+        : 'bg-white'
+      } flex flex-col items-center justify-center p-4 relative`}>
 
-          <form>
-            <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">Event Title</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter event title"
-                className="input input-bordered w-full"
-                {...register("title")}
-              />
+      {/* Theme Toggle */}
+      <button
+        onClick={toggleTheme}
+        className={`absolute top-6 right-6 p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+          ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
+          : isDarkMode
+            ? 'text-white bg-white/5 border border-white/10'
+            : 'text-slate-700 bg-black/5 border border-black/10'
+          }`}
+        aria-label="Toggle theme"
+      >
+        {!isMounted ? <Moon size={24} /> : isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+      </button>
+
+      <div className="relative z-10 w-full max-w-md animate-fade-in">
+        {/* Main Card */}
+        <div className={`card shadow-xl backdrop-blur-sm border transition-all duration-300 ${!isMounted
+          ? 'bg-white/80 border-black/10' // Default to light mode
+          : isDarkMode
+            ? 'bg-white/5 border-white/10'
+            : 'bg-white/80 border-black/10'
+          }`}>
+          <div className="card-body p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${!isMounted
+                ? 'bg-blue-600' // Default to light mode
+                : isDarkMode
+                  ? 'bg-blue-500'
+                  : 'bg-blue-600'
+                }`}>
+                <Timer className="w-8 h-8 text-white" />
+              </div>
+              <h1 className={`text-3xl font-bold mb-2 ${!isMounted
+                ? 'text-slate-800' // Default to light mode
+                : isDarkMode ? 'text-white' : 'text-slate-800'
+                }`}>
+                Countdown Timer
+              </h1>
+              <p className={`text-sm ${!isMounted
+                ? 'text-slate-600' // Default to light mode
+                : isDarkMode ? 'text-white/70' : 'text-slate-600'
+                }`}>
+                Create beautiful countdown timers for any event
+              </p>
             </div>
 
-            <div className="form-control w-full mt-4">
-              <label className="label">
-                <span className="label-text">Target Time</span>
-                <span className="label-text-alt">Will use today or tomorrow</span>
-              </label>
-              <input
-                type="time"
-                className={`input input-bordered w-full ${errors.time ? 'input-error' : ''}`}
-                {...register("time")}
-              />
-              {errors.time && (
-                <label className="label">
-                  <span className="label-text-alt text-error">{errors.time.message}</span>
+            <form className="space-y-6">
+              {/* Event Title */}
+              <div className="form-control">
+                <label className={`label ${!isMounted
+                  ? 'text-slate-700' // Default to light mode
+                  : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                  <span className="label-text flex items-center gap-2">
+                    <Sparkles size={16} />
+                    Event Title
+                  </span>
+                  <span className="label-text-alt text-xs opacity-60">Optional</span>
                 </label>
-              )}
-            </div>
+                <input
+                  type="text"
+                  placeholder="New Year's Eve, Meeting, Birthday..."
+                  className={`input input-bordered w-full transition-all duration-300 ${!isMounted
+                    ? 'bg-white/80 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-purple-400' // Default to light mode
+                    : isDarkMode
+                      ? 'bg-white/10 border-white/20 text-white placeholder-white/50 focus:border-purple-400'
+                      : 'bg-white/80 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-purple-400'
+                    } ${watchedTitle ? 'ring-2 ring-purple-400/20' : ''}`}
+                  {...register("title")}
+                />
+              </div>
 
-            <div className="card-actions justify-between mt-6">
-              <button
-                type="button"
-                className="btn btn-outline btn-primary"
-                onClick={handleCopyLink}
-                disabled={!watchedTime}
-              >
-                <Link className="w-4 h-4 mr-1" />
-                Copy Link
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleGoToTimer}
-                disabled={!watchedTime}
-              >
-                <TimerIcon className="w-4 h-4 mr-1" />
-                Go to Timer Page
-              </button>
+              {/* Target Time */}
+              <div className="form-control">
+                <label className={`label ${!isMounted
+                  ? 'text-slate-700' // Default to light mode
+                  : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                  <span className="label-text flex items-center gap-2">
+                    <Clock size={16} />
+                    Target Time
+                  </span>
+                  <span className="label-text-alt text-xs opacity-60">Required</span>
+                </label>
+                <input
+                  type="time"
+                  className={`input input-bordered w-full transition-all duration-300 ${!isMounted
+                    ? 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400' // Default to light mode
+                    : isDarkMode
+                      ? 'bg-white/10 border-white/20 text-white focus:border-purple-400'
+                      : 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400'
+                    } ${errors.time ? 'border-red-400 focus:border-red-400' : ''} ${watchedTime ? 'ring-2 ring-purple-400/20' : ''
+                    }`}
+                  {...register("time")}
+                />
+                {errors.time && (
+                  <label className="label">
+                    <span className="label-text-alt text-red-400 text-sm">{errors.time.message}</span>
+                  </label>
+                )}
+                {watchedTime && !errors.time && (
+                  <label className="label">
+                    <span className={`label-text-alt text-sm ${!isMounted
+                      ? 'text-purple-600' // Default to light mode
+                      : isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                      }`}>
+                      {getTargetTimePreview()}
+                    </span>
+                  </label>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button
+                  type="button"
+                  className={`btn flex-1 transition-all duration-200 ${!isMounted
+                    ? 'btn-outline border-slate-300 text-slate-700 hover:bg-slate-50' // Default to light mode
+                    : isDarkMode
+                      ? 'btn-outline border-white/30 text-white hover:bg-white/10'
+                      : 'btn-outline border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  onClick={handleCopyLink}
+                  disabled={!watchedTime || isLoading}
+                >
+                  <Link className="w-4 h-4" />
+                  Copy Link
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-primary flex-1 transition-all duration-200 ${!isMounted
+                    ? 'bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700' // Default to light mode
+                    : isDarkMode
+                      ? 'bg-blue-500 border-blue-500 hover:bg-blue-600 hover:border-blue-600'
+                      : 'bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700'
+                    } ${isLoading ? 'loading' : ''}`}
+                  onClick={handleGoToTimer}
+                  disabled={!watchedTime || isLoading}
+                >
+                  {!isLoading && <Play className="w-4 h-4" />}
+                  Start Timer
+                </button>
+              </div>
+            </form>
+
+            {/* Features */}
+            <div className={`mt-8 pt-6 border-t ${!isMounted
+              ? 'border-slate-200' // Default to light mode
+              : isDarkMode ? 'border-white/10' : 'border-slate-200'
+              }`}>
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <div className={`text-sm font-medium ${!isMounted
+                    ? 'text-slate-700' // Default to light mode
+                    : isDarkMode ? 'text-white/90' : 'text-slate-700'
+                    }`}>
+                    Fullscreen Mode
+                  </div>
+                  <div className={`text-xs ${!isMounted
+                    ? 'text-slate-500' // Default to light mode
+                    : isDarkMode ? 'text-white/60' : 'text-slate-500'
+                    }`}>
+                    Distraction-free viewing
+                  </div>
+                </div>
+                <div>
+                  <div className={`text-sm font-medium ${!isMounted
+                    ? 'text-slate-700' // Default to light mode
+                    : isDarkMode ? 'text-white/90' : 'text-slate-700'
+                    }`}>
+                    Screen Wake Lock
+                  </div>
+                  <div className={`text-xs ${!isMounted
+                    ? 'text-slate-500' // Default to light mode
+                    : isDarkMode ? 'text-white/60' : 'text-slate-500'
+                    }`}>
+                    Keeps screen active
+                  </div>
+                </div>
+              </div>
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-center"
+        containerStyle={{
+          top: 80,
+        }}
+      />
     </div>
   )
 }
