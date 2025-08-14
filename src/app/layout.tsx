@@ -15,25 +15,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Beautiful Countdown Timer - Create Stunning Event Timers",
-  description: "Create beautiful, fullscreen countdown timers for any event. Features include wake lock, responsive design, and shareable links.",
-  keywords: "countdown timer, event timer, fullscreen timer, countdown clock, timer app",
-  authors: [{ name: "Timer App" }],
-  creator: "Timer App",
-  publisher: "Timer App",
-  metadataBase: new URL('https://timer.app'),
+  title: "Countdown Timer - Beautiful Event Timers with Wake Lock",
+  description: "Create stunning countdown timers for events, meetings, and special occasions. Features fullscreen mode, screen wake lock, dark/light themes, and shareable links. Perfect for presentations, events, and time-sensitive activities.",
+  keywords: "countdown timer, event timer, fullscreen timer, countdown clock, timer app, wake lock, meeting timer, presentation timer, event countdown, digital timer",
+  authors: [{ name: "Michael Rostar" }],
+  creator: "Michael Rostar",
+  publisher: "Michael Rostar",
+  metadataBase: new URL('https://timer-countdown.app'),
   openGraph: {
-    title: "Beautiful Countdown Timer",
-    description: "Create stunning countdown timers for any event with fullscreen mode and wake lock support.",
-    url: "https://timer.app",
-    siteName: "Timer App",
+    title: "Countdown Timer - Beautiful Event Timers",
+    description: "Create stunning countdown timers with fullscreen mode, wake lock, and theme switching. Perfect for events, meetings, and presentations.",
+    url: "https://timer-countdown.app",
+    siteName: "Countdown Timer",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Beautiful Countdown Timer",
-    description: "Create stunning countdown timers for any event with fullscreen mode and wake lock support.",
+    title: "Countdown Timer - Beautiful Event Timers",
+    description: "Create stunning countdown timers with fullscreen mode, wake lock, and theme switching. Perfect for events, meetings, and presentations.",
   },
   robots: {
     index: true,
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     maximumScale: 1,
   },
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
   ],
 };

@@ -130,10 +130,11 @@ export default function Home() {
       (data) => {
         // Convert time to a full datetime
         const dateTimeStr = timeToDateTime(data.time)
+        const startTimeStr = new Date().toISOString()
 
         // Make title parameter optional by only including it if it exists
         const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
-        const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(dateTimeStr)}${titleParam}`
+        const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}`
         navigator.clipboard.writeText(url)
 
         toast.custom((t) => (
@@ -186,9 +187,10 @@ export default function Home() {
       (data) => {
         // Convert time to a full datetime
         const dateTimeStr = timeToDateTime(data.time)
+        const startTimeStr = new Date().toISOString()
 
         const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
-        router.push(`/timer?dateTime=${encodeURIComponent(dateTimeStr)}${titleParam}`)
+        router.push(`/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}`)
       },
       (formErrors) => {
         if (formErrors.time) {

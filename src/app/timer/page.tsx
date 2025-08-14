@@ -254,8 +254,8 @@ function TimerContent() {
                 <button
                     type="button"
                     onClick={() => router.push('/')}
-                    className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
-                        ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
+                    className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 cursor-pointer ${!isMounted
+                        ? 'text-slate-700 bg-black/5 border border-black/10'
                         : isDarkMode
                             ? 'text-white bg-white/5 border border-white/10'
                             : 'text-slate-700 bg-black/5 border border-black/10'
@@ -269,7 +269,7 @@ function TimerContent() {
                     <button
                         type="button"
                         onClick={toggleTheme}
-                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 cursor-pointer ${!isMounted
                             ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
                             : isDarkMode
                                 ? 'text-white bg-white/5 border border-white/10'
@@ -283,7 +283,7 @@ function TimerContent() {
                     <button
                         type="button"
                         onClick={toggleFullscreen}
-                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 ${!isMounted
+                        className={`p-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 cursor-pointer ${!isMounted
                             ? 'text-slate-700 bg-black/5 border border-black/10' // Default to light mode
                             : isDarkMode
                                 ? 'text-white bg-white/5 border border-white/10'
