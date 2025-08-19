@@ -135,7 +135,7 @@ export default function Home() {
     } else if (watchedTimerMode === "duration" && watchedDuration) {
       const hours = Math.floor(watchedDuration / 60)
       const minutes = watchedDuration % 60
-      
+
       if (hours > 0) {
         return minutes > 0 ? `${hours}h ${minutes}m from now` : `${hours}h from now`
       } else {
@@ -160,7 +160,7 @@ export default function Home() {
           setIsLoading(false)
           return
         }
-        
+
         const startTimeStr = new Date().toISOString()
 
         // Make title parameter optional by only including it if it exists
@@ -227,7 +227,7 @@ export default function Home() {
           setIsLoading(false)
           return
         }
-        
+
         const startTimeStr = new Date().toISOString()
 
         const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
@@ -352,28 +352,28 @@ export default function Home() {
                   </span>
                 </label>
                 <div className="flex gap-4">
-                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'target-time' 
+                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'target-time'
                     ? (isDarkMode ? 'border-purple-400 bg-purple-400/10' : 'border-purple-400 bg-purple-50')
                     : (isDarkMode ? 'border-white/20 hover:border-white/30' : 'border-slate-200 hover:border-slate-300')
                     }`}>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       value="target-time"
-                      className="radio radio-primary" 
+                      className="radio radio-primary"
                       {...register("timerMode")}
                     />
                     <span className={`label-text ${!isMounted
                       ? 'text-slate-700' // Default to light mode
                       : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>Target Time</span>
                   </label>
-                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'duration' 
+                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'duration'
                     ? (isDarkMode ? 'border-purple-400 bg-purple-400/10' : 'border-purple-400 bg-purple-50')
                     : (isDarkMode ? 'border-white/20 hover:border-white/30' : 'border-slate-200 hover:border-slate-300')
                     }`}>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       value="duration"
-                      className="radio radio-primary" 
+                      className="radio radio-primary"
                       {...register("timerMode")}
                     />
                     <span className={`label-text ${!isMounted
@@ -494,9 +494,9 @@ export default function Home() {
                       <label className={`label cursor-pointer justify-start gap-3 ${!isMounted
                         ? 'text-slate-700' // Default to light mode
                         : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
-                        <input 
-                          type="checkbox" 
-                          className="checkbox checkbox-primary" 
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-primary"
                           {...register("hideDate")}
                         />
                         <span className="label-text">Hide date display</span>
