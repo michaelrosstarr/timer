@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Maximize2, Minimize2, ArrowLeft, Calendar, Moon, Sun } from "lucide-react"
+import { Maximize2, Minimize2, ArrowLeft, Calendar, Moon, Sun, Plus } from "lucide-react"
 
 // Create a client component that uses useSearchParams
 function TimerContent() {
@@ -11,12 +11,31 @@ function TimerContent() {
 
     const title = searchParams.get("title");
     const dateTime = searchParams.get("dateTime");
+    const hideDate = searchParams.get("hideDate") === "true";
 
     const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 })
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [isUIVisible, setIsUIVisible] = useState(true)
     const [isDarkMode, setIsDarkMode] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+    const [targetDateTime, setTargetDateTime] = useState<string | null>(null)
+
+    // Functions to add extra time
+    const addExtraTime = (minutes: number) => {
+        if (!targetDateTime) return
+
+        const currentTarget = new Date(targetDateTime)
+        currentTarget.setMinutes(currentTarget.getMinutes() + minutes)
+        const newTargetDateTime = currentTarget.toISOString()
+
+        setTargetDateTime(newTargetDateTime)
+
+        // Update URL with new target time
+        const titleParam = title ? `&title=${encodeURIComponent(title)}` : ""
+        const hideDateParam = hideDate ? `&hideDate=true` : ""
+        const newUrl = `${window.location.pathname}?dateTime=${encodeURIComponent(newTargetDateTime)}${titleParam}${hideDateParam}`
+        window.history.replaceState({}, '', newUrl)
+    }
 
     // Set mounted state after hydration
     useEffect(() => {
@@ -130,7 +149,14 @@ function TimerContent() {
             return
         }
 
-        const targetDate = new Date(dateTime).getTime()
+        // Initialize target date time
+        setTargetDateTime(dateTime)
+    }, [dateTime, router])
+
+    useEffect(() => {
+        if (!targetDateTime) return
+
+        const targetDate = new Date(targetDateTime).getTime()
 
         const calculateTimeLeft = () => {
             const now = new Date().getTime()
@@ -158,7 +184,7 @@ function TimerContent() {
 
         // Clean up interval on unmount
         return () => clearInterval(timer)
-    }, [dateTime, router])
+    }, [targetDateTime])
 
     // Theme detection and handling
     useEffect(() => {
@@ -226,8 +252,8 @@ function TimerContent() {
     }
 
     const getTargetTimeFormatted = () => {
-        if (!dateTime) return ""
-        const target = new Date(dateTime)
+        if (!targetDateTime) return ""
+        const target = new Date(targetDateTime)
         return target.toLocaleString(undefined, {
             weekday: 'short',
             month: 'short',
@@ -308,18 +334,20 @@ function TimerContent() {
                     </h1>
                 )}
 
-                {/* Target Time Display */}
-                <div className={`flex items-center gap-2 mb-4 px-4 py-2 rounded-lg glass-effect ${!isMounted
-                    ? 'text-slate-600 bg-black/5 border border-black/10' // Default to light mode
-                    : isDarkMode
-                        ? 'text-white/80 bg-white/5 border border-white/10'
-                        : 'text-slate-600 bg-black/5 border border-black/10'
-                    }`}>
-                    <Calendar size={20} />
-                    <span className="text-lg font-medium">
-                        {getTargetTimeFormatted()}
-                    </span>
-                </div>
+                {/* Target Time Display - conditionally shown */}
+                {!hideDate && (
+                    <div className={`flex items-center gap-2 mb-4 px-4 py-2 rounded-lg glass-effect ${!isMounted
+                        ? 'text-slate-600 bg-black/5 border border-black/10' // Default to light mode
+                        : isDarkMode
+                            ? 'text-white/80 bg-white/5 border border-white/10'
+                            : 'text-slate-600 bg-black/5 border border-black/10'
+                        }`}>
+                        <Calendar size={20} />
+                        <span className="text-lg font-medium">
+                            {getTargetTimeFormatted()}
+                        </span>
+                    </div>
+                )}
 
                 {/* Timer Display */}
                 <div className={`text-center font-bold ${!isMounted
@@ -330,6 +358,43 @@ function TimerContent() {
                     }`}>
                     {getTimeLeftFormatted()}
                 </div>
+            </div>
+
+            {/* Extra Time Buttons - Fixed to bottom right */}
+            <div className={`fixed bottom-6 right-6 flex flex-col gap-3 z-10 ${isUIVisible ? 'opacity-100' : 'opacity-0'
+                } transition-opacity duration-300`}>
+                <button
+                    type="button"
+                    onClick={() => addExtraTime(5)}
+                    className={`px-4 py-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 cursor-pointer shadow-lg ${!isMounted
+                        ? 'text-slate-700 bg-black/5 border border-black/10'
+                        : isDarkMode
+                            ? 'text-white bg-white/5 border border-white/10'
+                            : 'text-slate-700 bg-black/5 border border-black/10'
+                        }`}
+                    aria-label="Add 5 minutes"
+                >
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                        <Plus size={16} />
+                        5 min
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => addExtraTime(10)}
+                    className={`px-4 py-3 rounded-lg glass-effect hover:bg-black/5 hover:dark:bg-white/10 transition-all duration-200 cursor-pointer shadow-lg ${!isMounted
+                        ? 'text-slate-700 bg-black/5 border border-black/10'
+                        : isDarkMode
+                            ? 'text-white bg-white/5 border border-white/10'
+                            : 'text-slate-700 bg-black/5 border border-black/10'
+                        }`}
+                    aria-label="Add 10 minutes"
+                >
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                        <Plus size={16} />
+                        10 min
+                    </span>
+                </button>
             </div>
         </div>
     )

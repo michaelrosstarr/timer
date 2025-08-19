@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Clock, Link, Timer, Moon, Sun, Sparkles, Play } from "lucide-react"
+import { Clock, Link, Timer, Moon, Sun, Sparkles, Play, Settings } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -11,19 +11,19 @@ import { useState, useEffect } from "react"
 // Define the form schema with Zod
 const formSchema = z.object({
   title: z.string().optional(),
-  time: z.string().refine((timeStr) => {
-    // Ensure the time is in the future
-    if (!timeStr) return false
-
-    const [hours, minutes] = timeStr.split(':').map(Number)
-
-    const selectedTime = new Date()
-    selectedTime.setHours(hours, minutes, 0, 0)
-
-    // If the time is earlier today, we'll assume it's for tomorrow
-    // This logic is handled in timeToDateTime function, just validate it has a value
-    return true
-  }, { message: "Please select a time" })
+  timerMode: z.enum(["target-time", "duration"]),
+  time: z.string().optional(),
+  duration: z.number().min(1, "Duration must be at least 1 minute").optional(),
+  hideDate: z.boolean()
+}).refine((data) => {
+  if (data.timerMode === "target-time") {
+    return data.time && data.time.length > 0
+  } else {
+    return data.duration && data.duration > 0
+  }
+}, {
+  message: "Please provide either a target time or duration",
+  path: ["time"] // This will show the error on the time field
 })
 
 // Define TypeScript type based on the schema
@@ -77,6 +77,13 @@ export default function Home() {
     return dateTime.toISOString()
   }
 
+  // Helper function to convert duration to DateTime
+  const durationToDateTime = (durationMinutes: number): string => {
+    const now = new Date()
+    const targetTime = new Date(now.getTime() + (durationMinutes * 60 * 1000))
+    return targetTime.toISOString()
+  }
+
   // Set up React Hook Form with Zod validation
   const {
     register,
@@ -87,40 +94,55 @@ export default function Home() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      time: ""
+      timerMode: "target-time" as const,
+      time: "",
+      duration: undefined,
+      hideDate: false
     }
   })
 
-  // Watch the time value for real-time access
+  // Watch the form values for real-time access
   const watchedTime = watch("time")
   const watchedTitle = watch("title")
+  const watchedTimerMode = watch("timerMode")
+  const watchedDuration = watch("duration")
 
   const getTargetTimePreview = () => {
-    if (!watchedTime) return ""
+    if (watchedTimerMode === "target-time" && watchedTime) {
+      try {
+        const dateTimeStr = timeToDateTime(watchedTime)
+        const target = new Date(dateTimeStr)
+        const now = new Date()
 
-    try {
-      const dateTimeStr = timeToDateTime(watchedTime)
-      const target = new Date(dateTimeStr)
-      const now = new Date()
+        const isToday = target.toDateString() === now.toDateString()
+        const isTomorrow = target.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString()
 
-      const isToday = target.toDateString() === now.toDateString()
-      const isTomorrow = target.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString()
+        let dayText = ""
+        if (isToday) dayText = "Today"
+        else if (isTomorrow) dayText = "Tomorrow"
+        else dayText = target.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
-      let dayText = ""
-      if (isToday) dayText = "Today"
-      else if (isTomorrow) dayText = "Tomorrow"
-      else dayText = target.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+        const timeText = target.toLocaleTimeString(undefined, {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
 
-      const timeText = target.toLocaleTimeString(undefined, {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
-
-      return `${dayText} at ${timeText}`
-    } catch {
-      return ""
+        return `${dayText} at ${timeText}`
+      } catch {
+        return ""
+      }
+    } else if (watchedTimerMode === "duration" && watchedDuration) {
+      const hours = Math.floor(watchedDuration / 60)
+      const minutes = watchedDuration % 60
+      
+      if (hours > 0) {
+        return minutes > 0 ? `${hours}h ${minutes}m from now` : `${hours}h from now`
+      } else {
+        return `${minutes}m from now`
+      }
     }
+    return ""
   }
 
   const handleCopyLink = () => {
@@ -128,13 +150,23 @@ export default function Home() {
     // Use handleSubmit from react-hook-form to validate before processing
     handleSubmit(
       (data) => {
-        // Convert time to a full datetime
-        const dateTimeStr = timeToDateTime(data.time)
+        // Convert time to a full datetime based on mode
+        let dateTimeStr: string
+        if (data.timerMode === "target-time" && data.time) {
+          dateTimeStr = timeToDateTime(data.time)
+        } else if (data.timerMode === "duration" && data.duration) {
+          dateTimeStr = durationToDateTime(data.duration)
+        } else {
+          setIsLoading(false)
+          return
+        }
+        
         const startTimeStr = new Date().toISOString()
 
         // Make title parameter optional by only including it if it exists
         const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
-        const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}`
+        const hideDateParam = data.hideDate ? `&hideDate=true` : ""
+        const url = `${window.location.origin}/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}${hideDateParam}`
         navigator.clipboard.writeText(url)
 
         toast.custom((t) => (
@@ -167,8 +199,8 @@ export default function Home() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Invalid time</h3>
-                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please select a time"}</div>
+                    <h3 className="font-bold">Invalid input</h3>
+                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please provide valid timer input"}</div>
                   </div>
                 </div>
               </div>
@@ -185,12 +217,22 @@ export default function Home() {
     // Use handleSubmit from react-hook-form to validate before processing
     handleSubmit(
       (data) => {
-        // Convert time to a full datetime
-        const dateTimeStr = timeToDateTime(data.time)
+        // Convert time to a full datetime based on mode
+        let dateTimeStr: string
+        if (data.timerMode === "target-time" && data.time) {
+          dateTimeStr = timeToDateTime(data.time)
+        } else if (data.timerMode === "duration" && data.duration) {
+          dateTimeStr = durationToDateTime(data.duration)
+        } else {
+          setIsLoading(false)
+          return
+        }
+        
         const startTimeStr = new Date().toISOString()
 
         const titleParam = data.title ? `&title=${encodeURIComponent(data.title)}` : ""
-        router.push(`/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}`)
+        const hideDateParam = data.hideDate ? `&hideDate=true` : ""
+        router.push(`/timer?dateTime=${encodeURIComponent(dateTimeStr)}&startTime=${encodeURIComponent(startTimeStr)}${titleParam}${hideDateParam}`)
       },
       (formErrors) => {
         if (formErrors.time) {
@@ -202,8 +244,8 @@ export default function Home() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Invalid time</h3>
-                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please select a time"}</div>
+                    <h3 className="font-bold">Invalid input</h3>
+                    <div className="text-sm opacity-80">{formErrors.time?.message || "Please provide valid timer input"}</div>
                   </div>
                 </div>
               </div>
@@ -299,46 +341,170 @@ export default function Home() {
                 />
               </div>
 
-              {/* Target Time */}
+              {/* Timer Mode Selection */}
               <div className="form-control">
                 <label className={`label ${!isMounted
                   ? 'text-slate-700' // Default to light mode
                   : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
                   <span className="label-text flex items-center gap-2">
-                    <Clock size={16} />
-                    Target Time
+                    <Timer size={16} />
+                    Timer Type
                   </span>
-                  <span className="label-text-alt text-xs opacity-60">Required</span>
                 </label>
-                <input
-                  type="time"
-                  className={`input input-bordered w-full transition-all duration-300 ${!isMounted
-                    ? 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400' // Default to light mode
-                    : isDarkMode
-                      ? 'bg-white/10 border-white/20 text-white focus:border-purple-400'
-                      : 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400'
-                    } ${errors.time ? 'border-red-400 focus:border-red-400' : ''} ${watchedTime ? 'ring-2 ring-purple-400/20' : ''
-                    }`}
-                  {...register("time")}
-                />
-                {errors.time && (
-                  <label className="label">
-                    <span className="label-text-alt text-red-400 text-sm">{errors.time.message}</span>
+                <div className="flex gap-4">
+                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'target-time' 
+                    ? (isDarkMode ? 'border-purple-400 bg-purple-400/10' : 'border-purple-400 bg-purple-50')
+                    : (isDarkMode ? 'border-white/20 hover:border-white/30' : 'border-slate-200 hover:border-slate-300')
+                    }`}>
+                    <input 
+                      type="radio" 
+                      value="target-time"
+                      className="radio radio-primary" 
+                      {...register("timerMode")}
+                    />
+                    <span className={`label-text ${!isMounted
+                      ? 'text-slate-700' // Default to light mode
+                      : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>Target Time</span>
                   </label>
-                )}
-                {watchedTime && !errors.time && (
-                  <label className="label">
-                    <span className={`label-text-alt text-sm ${!isMounted
-                      ? 'text-purple-600' // Default to light mode
-                      : isDarkMode ? 'text-purple-300' : 'text-purple-600'
-                      }`}>
-                      {getTargetTimePreview()}
-                    </span>
+                  <label className={`label cursor-pointer flex-1 justify-start gap-3 p-3 rounded-lg border transition-all duration-300 ${watchedTimerMode === 'duration' 
+                    ? (isDarkMode ? 'border-purple-400 bg-purple-400/10' : 'border-purple-400 bg-purple-50')
+                    : (isDarkMode ? 'border-white/20 hover:border-white/30' : 'border-slate-200 hover:border-slate-300')
+                    }`}>
+                    <input 
+                      type="radio" 
+                      value="duration"
+                      className="radio radio-primary" 
+                      {...register("timerMode")}
+                    />
+                    <span className={`label-text ${!isMounted
+                      ? 'text-slate-700' // Default to light mode
+                      : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>Duration</span>
                   </label>
-                )}
+                </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Target Time - shown only when target-time mode is selected */}
+              {watchedTimerMode === 'target-time' && (
+                <div className="form-control">
+                  <label className={`label ${!isMounted
+                    ? 'text-slate-700' // Default to light mode
+                    : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                    <span className="label-text flex items-center gap-2">
+                      <Clock size={16} />
+                      Target Time
+                    </span>
+                    <span className="label-text-alt text-xs opacity-60">Required</span>
+                  </label>
+                  <input
+                    type="time"
+                    className={`input input-bordered w-full transition-all duration-300 ${!isMounted
+                      ? 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400' // Default to light mode
+                      : isDarkMode
+                        ? 'bg-white/10 border-white/20 text-white focus:border-purple-400'
+                        : 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400'
+                      } ${errors.time ? 'border-red-400 focus:border-red-400' : ''} ${watchedTime ? 'ring-2 ring-purple-400/20' : ''
+                      }`}
+                    {...register("time")}
+                  />
+                  {errors.time && (
+                    <label className="label">
+                      <span className="label-text-alt text-red-400 text-sm">{errors.time.message}</span>
+                    </label>
+                  )}
+                  {watchedTime && !errors.time && (
+                    <label className="label">
+                      <span className={`label-text-alt text-sm ${!isMounted
+                        ? 'text-purple-600' // Default to light mode
+                        : isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                        }`}>
+                        {getTargetTimePreview()}
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {/* Duration - shown only when duration mode is selected */}
+              {watchedTimerMode === 'duration' && (
+                <div className="form-control">
+                  <label className={`label ${!isMounted
+                    ? 'text-slate-700' // Default to light mode
+                    : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                    <span className="label-text flex items-center gap-2">
+                      <Clock size={16} />
+                      Duration (minutes)
+                    </span>
+                    <span className="label-text-alt text-xs opacity-60">Required</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10080" // 7 days in minutes
+                    placeholder="e.g., 25, 60, 90..."
+                    className={`input input-bordered w-full transition-all duration-300 ${!isMounted
+                      ? 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400' // Default to light mode
+                      : isDarkMode
+                        ? 'bg-white/10 border-white/20 text-white focus:border-purple-400'
+                        : 'bg-white/80 border-slate-200 text-slate-800 focus:border-purple-400'
+                      } ${errors.duration ? 'border-red-400 focus:border-red-400' : ''} ${watchedDuration ? 'ring-2 ring-purple-400/20' : ''
+                      }`}
+                    {...register("duration", { valueAsNumber: true })}
+                  />
+                  {errors.duration && (
+                    <label className="label">
+                      <span className="label-text-alt text-red-400 text-sm">{errors.duration.message}</span>
+                    </label>
+                  )}
+                  {watchedDuration && !errors.duration && (
+                    <label className="label">
+                      <span className={`label-text-alt text-sm ${!isMounted
+                        ? 'text-purple-600' // Default to light mode
+                        : isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                        }`}>
+                        {getTargetTimePreview()}
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {/* Settings Dropdown */}
+              <div className="form-control">
+                <details className={`dropdown dropdown-top w-full ${!isMounted
+                  ? 'text-slate-700' // Default to light mode
+                  : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                  <summary className={`btn btn-outline w-full justify-between transition-all duration-300 ${!isMounted
+                    ? 'border-slate-200 text-slate-700 hover:bg-slate-50' // Default to light mode
+                    : isDarkMode
+                      ? 'border-white/30 text-white hover:bg-white/10'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}>
+                    <span className="flex items-center gap-2">
+                      <Settings size={16} />
+                      Timer Options
+                    </span>
+                  </summary>
+                  <div className={`dropdown-content p-4 shadow-lg rounded-lg mt-2 w-full ${!isMounted
+                    ? 'bg-white border border-slate-200' // Default to light mode
+                    : isDarkMode
+                      ? 'bg-slate-800 border border-white/10'
+                      : 'bg-white border border-slate-200'
+                    }`}>
+                    <div className="form-control">
+                      <label className={`label cursor-pointer justify-start gap-3 ${!isMounted
+                        ? 'text-slate-700' // Default to light mode
+                        : isDarkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                        <input 
+                          type="checkbox" 
+                          className="checkbox checkbox-primary" 
+                          {...register("hideDate")}
+                        />
+                        <span className="label-text">Hide date display</span>
+                      </label>
+                    </div>
+                  </div>
+                </details>
+              </div>              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
                   type="button"
@@ -349,7 +515,7 @@ export default function Home() {
                       : 'btn-outline border-slate-300 text-slate-700 hover:bg-slate-50'
                     }`}
                   onClick={handleCopyLink}
-                  disabled={!watchedTime || isLoading}
+                  disabled={!((watchedTimerMode === 'target-time' && watchedTime) || (watchedTimerMode === 'duration' && watchedDuration)) || isLoading}
                 >
                   <Link className="w-4 h-4" />
                   Copy Link
@@ -363,7 +529,7 @@ export default function Home() {
                       : 'bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700'
                     } ${isLoading ? 'loading' : ''}`}
                   onClick={handleGoToTimer}
-                  disabled={!watchedTime || isLoading}
+                  disabled={!((watchedTimerMode === 'target-time' && watchedTime) || (watchedTimerMode === 'duration' && watchedDuration)) || isLoading}
                 >
                   {!isLoading && <Play className="w-4 h-4" />}
                   Start Timer
